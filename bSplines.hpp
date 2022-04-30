@@ -25,8 +25,8 @@ using std::cout;
 using std::endl;
 
 /**
- * @brief calculates non-zero n-th derivative of B-Spline B_k,i(x) from the non-zero B-splines B_k-n,i(x) 
- *        The splines are ordered in descending order e.g. [B_i, B_i-1, B_i-2, ... , B_i-kOrd+1]
+ * @brief calculates non-zero n-th derivative of B-Spline B_k,i(x) from the non-zero B-splines B_k-n,i(x). 
+ *        The splines are ordered in descending order e.g. [B_i, B_i-1, B_i-2, ... , B_i-kOrd+1]. 
  *        This function is more of a helper methods for the bigger bSplinesWithDeriv() than a really useful
  *        function. I would adwise to just calculate everything with bSplinesWithDeriv()
  * 
@@ -70,7 +70,7 @@ std::cout << ndxBsplines(splines, knots, index, orderDeriv) << std::endl;
  * @return ArrayXd of length k that contains the derivative values of the non-zero derivatives
  *         of splines B_k,i(x)
  */
-ArrayXd ndxBsplines(ArrayXd splines, ArrayXd knotsInput, int index, uint nthDeriv=1)
+ArrayXd ndxBsplines(ArrayXd &splines, ArrayXd &knotsInput, int index, uint nthDeriv=1)
 {
     int kOrd = splines.size();
 
@@ -106,7 +106,7 @@ ArrayXd ndxBsplines(ArrayXd splines, ArrayXd knotsInput, int index, uint nthDeri
 /**
  * @brief Function that returns spline values at position x but only those that are not zero
  *        together with all derivatives until the nth derivative.
- *        It also returns an index of the highest spline that is non-zero.
+ *        It also returns an index of the spline furthest to the right that is non-zero.
  *        Ghost points on both sides of the knots are automatically generated.
  *        The splines are ordered in descending order e.g. [B_i, B_i-1, B_i-2, ... , B_i-kOrd+1]
  * 
