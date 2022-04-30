@@ -2,131 +2,11 @@
 
 #include <iostream>
 #include <tuple>
-#include <vector>
 #include <Eigen/Dense>
 
 using namespace Eigen;
 using std::cout;
 using std::endl;
-
-template <typename T>
-std::tuple<std::vector<T>, std::size_t> bsplines(T x,
-                                                 const std::vector<T>& knots,
-                                                 std::size_t order) {
-  int n_knots = knots.size();
-
-  // Check that input fulfills contrains, if in debug mode
-#ifndef NDEBUG
-  assert((knots[0] <= x) && (x <= knots[n_knots - 1]));
-  for (int i = 1; i < n_knots; i++) {
-    assert(knots[i - 1] <= knots[i]);
-  }
-#endif
-
-  // function to get the knot, or automatically return ghost point if our\t of
-  // range
-  auto get_knot = [&knots, &n_knots](int i) {
-    if (i < 0)
-      return knots[0];
-    else if (n_knots <= i)
-      return knots[n_knots - 1];
-    else
-      return knots[i];
-  };
-
-  // Find the knot index where the value is
-  int idx = 0;
-  while (x > knots[idx + 1]) idx++;
-
-  // initialize the vector with 0, except at the end
-  auto iter = std::vector<T>(order + 1, 0);
-  iter[order] = 1;
-
-  // fill the vector from idx-cur_order to end (each iteration)
-  // the last iteration will contain the non-zero b-spline
-  // this algorithm is similar to DeBoor's algorithm
-  // but does not calculate the sum, instead, it calculates
-  // the single non-zero BSplines
-  for (std::size_t cur_order = 1; cur_order <= order; cur_order++) {
-    // this replaces the left 'ghost points'
-    double w2 = (get_knot(idx + 1) - x) /
-                (get_knot(idx + 1) - get_knot(idx - cur_order + 1));
-    iter[order - cur_order] = w2 * iter[order - cur_order + 1];
-
-    for (int i = idx - cur_order + 1; i < idx; i++) {
-      const int iter_idx = i - idx + order;
-
-      double w1 = (x - get_knot(i)) / (get_knot(i + cur_order) - get_knot(i));
-      double w2 = (get_knot(i + cur_order + 1) - x) /
-                  (get_knot(i + cur_order + 1) - get_knot(i + 1));
-
-      // iteration
-      iter[iter_idx] = w1 * iter[iter_idx] + w2 * iter[iter_idx + 1];
-    }
-
-    // this replaces the right 'ghost points'
-    double w1 =
-        (x - get_knot(idx)) / (get_knot(idx + cur_order) - get_knot(idx));
-    // last iteration (iter_idx+1 will always be a ghost point or zero)
-    iter[order] = w1 * iter[order];
-  }
-
-  // return the bsplines and the index
-  return {iter, idx};
-}
-
-template <typename T>
-std::tuple<std::vector<T>, std::size_t> ndx_bsplines(
-    T x, const std::vector<T>& knots, std::size_t order,
-    std::size_t nth_deriv = 1) {
-  // derivative vanishes
-  if (nth_deriv > order) {
-    // Find the knot index where the value is
-    int idx = 0;
-    while (x > knots[idx + 1]) idx++;
-    return {std::vector<T>(order + 1, 0), idx};
-  }
-
-  auto [iter, idx] = bsplines(x, knots, order - nth_deriv);
-
-  int n_knots = knots.size();
-  // function to get the knot, or automatically return ghost point if out of
-  // range
-  auto get_knot = [&knots, &n_knots](int i) {
-    if (i < 0)
-      return knots[0];
-    else if (n_knots <= i)
-      return knots[n_knots - 1];
-    else
-      return knots[i];
-  };
-
-  // resize the vector so we still have the spline of order
-  // k-nth_deriv in the beginning, but now order+1 elements
-  iter.resize(order + 1);
-
-  for (int cur_order = order - nth_deriv + 1; cur_order <= int(order);
-       cur_order++) {
-    double w1 = 1. / (get_knot(idx + cur_order) - get_knot(idx));
-    iter[cur_order] = cur_order * iter[cur_order - 1] * w1;
-
-    // indices of previous iteration are shifted by 1
-    for (int i = cur_order - 1; i > 0; i--) {
-      const int real_i = idx - cur_order + i;
-      double w1 = 1. / (get_knot(real_i + cur_order) - get_knot(real_i));
-      double w2 =
-          1. / (get_knot(real_i + cur_order + 1) - get_knot(real_i + 1));
-
-      // indices of previous iteration are shifted by 1
-      iter[i] = cur_order * (iter[i - 1] * w1 - iter[i] * w2);
-    }
-
-    double w2 = 1. / (get_knot(idx + 1) - get_knot(idx - cur_order + 1));
-    iter[0] = -int(cur_order) * iter[0] * w2;
-  }
-  // return the bsplines derivatives and the index
-  return {iter, idx};
-}
 
 /**
  * @brief Returns nth derivative of B-splines from b-spline values
@@ -137,7 +17,7 @@ std::tuple<std::vector<T>, std::size_t> ndx_bsplines(
  * @param nthDeriv which derivative should be calculated, default = 1
  * @return ArrayXd
  */
-ArrayXd ndxBspline(ArrayXd splines, ArrayXd knotsInput, int index, uint nthDeriv=1)
+ArrayXd ndxBsplines(ArrayXd splines, ArrayXd knotsInput, int index, uint nthDeriv=1)
 {
     int kOrd = splines.size();
 
@@ -181,7 +61,7 @@ ArrayXd ndxBspline(ArrayXd splines, ArrayXd knotsInput, int index, uint nthDeriv
  * @return MatrixXd that contains the values of the splines and derivs and the index i in the ghosted array
  *         remember that the splines are ordered as i, i-1, i-2, ... i-kOrd+1 in the arrays
  */
-std::tuple<MatrixXd, int> bSplineAndDeriv(double x, ArrayXd &knotsInput, int kOrd, int nDeriv)
+std::tuple<MatrixXd, int> bSplinesWithDeriv(double x, ArrayXd &knotsInput, int kOrd, int nDeriv)
 {
     MatrixXd output = MatrixXd::Zero(kOrd,1+nDeriv);
  
@@ -230,7 +110,7 @@ std::tuple<MatrixXd, int> bSplineAndDeriv(double x, ArrayXd &knotsInput, int kOr
 
         if (k > kOrd-nDeriv-2)
         {
-            output.col(kOrd-k-1) = ndxBspline(splines, knots, i, kOrd-k-1);
+            output.col(kOrd-k-1) = ndxBsplines(splines, knots, i, kOrd-k-1);
         }
     }
 
@@ -241,21 +121,11 @@ std::tuple<MatrixXd, int> bSplineAndDeriv(double x, ArrayXd &knotsInput, int kOr
 
 int main()
 {
-    int kOrd = 7;
-    std::vector<double> knots = {0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1};
-    ArrayXd knots2 = ArrayXd::LinSpaced(11,0,1);
+    int kOrd = 4;
+    ArrayXd knots = ArrayXd::LinSpaced(11,0,1);
 
     double x = 0.52;
-    int orderDeriv = 0;
-    auto [mat, b] = bSplineAndDeriv(x, knots2, kOrd, orderDeriv);
+    int orderDeriv = 2;
+    auto [mat, b] = bSplinesWithDeriv(x, knots, kOrd, orderDeriv);
     cout << mat << endl;
-    
-
-    cout << "comparison" << endl;
-    for (int i = 0; i < orderDeriv+1; i++)
-    {
-        auto [iter, idx] = ndx_bsplines(x, knots, kOrd-1,i);
-        cout << "======= order" << i << endl;
-        for (auto x: iter) cout << x << endl;  
-    }
 }
