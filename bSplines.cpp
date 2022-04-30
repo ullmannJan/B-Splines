@@ -287,14 +287,14 @@ std::tuple<MatrixXd, int> bSplineAndDeriv(double x, ArrayXd &knotsInput, int kOr
 
 int main()
 {
-    int kOrd = 4;
+    int kOrd = 7;
     std::vector<double> knots = {0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1};
-    ArrayXd splines(4); 
-    splines << 1,0,0,0;
+    ArrayXd splines(kOrd); 
+    splines << 1,0,0,0,0,0,0;
     ArrayXd knots2 = ArrayXd::LinSpaced(11,0,1);
 
-    double x = 1.0;
-    int orderDeriv = 1;
+    double x = 1;
+    int orderDeriv = 4;
     //auto [mat, b] = bSplineAndDeriv(x, knots2, 4, 2);
     //cout << mat << endl;
 
