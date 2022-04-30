@@ -8,6 +8,8 @@
  * The used algorithms are similar to and inspired by DeBoors algorithm
  * (https://en.wikipedia.org/wiki/De_Boor%27s_algorithm), but distinct.
  *
+ * The useful function is called bSplinesWithDeriv() and is the one that should be used.
+ * 
  * Both functions provide some code example, to give you an idea how to
  * use them.
  *
@@ -106,6 +108,7 @@ ArrayXd ndxBsplines(ArrayXd &splines, ArrayXd &knotsInput, int index, uint nthDe
 /**
  * @brief Function that returns spline values at position x but only those that are not zero
  *        together with all derivatives until the nth derivative.
+ *        Enter nDeriv = 0 to just calculate the splines.
  *        It also returns an index of the spline furthest to the right that is non-zero.
  *        Ghost points on both sides of the knots are automatically generated.
  *        The splines are ordered in descending order e.g. [B_i, B_i-1, B_i-2, ... , B_i-kOrd+1]
@@ -136,11 +139,12 @@ std::cout << mat << std::endl;
  * @param x The x where to retrieve the spline values;
  * @param knotsInput the knot points without ghost points
  * @param kOrd order of the splines that are calculated
+ * @param nDeriv order of higest calculated derivative, default = 0
  * @return std::tuple<MatrixXd, int> that contains the splines in column 0 and then 
  *         the n-th derivative in the nth column.
  *         The other parameter is the highest index of the non-zero splines.
  */
-std::tuple<MatrixXd, int> bSplinesWithDeriv(double x, ArrayXd &knotsInput, int kOrd, int nDeriv)
+std::tuple<MatrixXd, int> bSplinesWithDeriv(double x, ArrayXd &knotsInput, int kOrd, int nDeriv=0)
 {
     MatrixXd output = MatrixXd::Zero(kOrd,1+nDeriv);
  
