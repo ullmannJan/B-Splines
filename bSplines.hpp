@@ -23,8 +23,6 @@
 #include <Eigen/Dense>
 
 using namespace Eigen;
-using std::cout;
-using std::endl;
 
 /**
  * @brief calculates non-zero n-th derivative of B-Spline B_k,i(x) from the non-zero B-splines B_k-n,i(x). 
