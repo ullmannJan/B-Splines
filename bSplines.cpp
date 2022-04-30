@@ -1,4 +1,4 @@
-#pragma once
+//#pragma once
 
 #include <iostream>
 #include <tuple>
@@ -138,7 +138,7 @@ std::tuple<std::vector<T>, std::size_t> ndx_bsplines(
  * @param nthDeriv which derivative should be calculated, default = 1
  * @return ArrayXd
  */
-ArrayXd ndxBspline(ArrayXd splines, ArrayXd knots, int index, unsigned int nthDeriv=1)
+ArrayXd ndxBsplineOld(ArrayXd splines, ArrayXd knots, int index, unsigned int nthDeriv=1)
 {
     int knotsSize = knots.size();
     int kOrd = splines.size();
@@ -162,7 +162,7 @@ ArrayXd ndxBspline(ArrayXd splines, ArrayXd knots, int index, unsigned int nthDe
         for (int j = n; j < kOrd-1; j++)
         {
             deriv(j) = (kOrd-n)*deriv(j) / (getKnot(i+j-n+1+k-1)-getKnot(i+j-n+1))
-                     - (kOrd-n)*deriv(j+1) / (getKnot(i+j-n+1+k)-getKnot(i+j-n+1+1));
+                     - (kOrd-n)*deriv(j-1) / (getKnot(i+j-n-1+k)-getKnot(i+j-n));
         }
         deriv(0) = (kOrd-n)*deriv(0) / (getKnot(i+k-1)-getKnot(i));
         //cout << deriv << endl;
@@ -170,6 +170,50 @@ ArrayXd ndxBspline(ArrayXd splines, ArrayXd knots, int index, unsigned int nthDe
 
     return deriv;
 }
+
+/**
+ * @brief Returns nth derivative of B-splines from b-spline values
+ * 
+ * @param splines Array of length (order of splines) that contains all non zero B-splines for a point x
+ * @param knots knot sequence of bsplines
+ * @param index the index of the knot left of the point x
+ * @param nthDeriv which derivative should be calculated, default = 1
+ * @return ArrayXd
+ */
+ArrayXd ndxBspline(ArrayXd splines, ArrayXd knotsInput, int index, uint nthDeriv=1)
+{
+    int kOrd = splines.size();
+
+
+    ArrayXd knots(knotsInput.size()+2*kOrd-2);
+    //we add the ghost points for calculation of the splines in every point
+    knots << ArrayXd::Constant(kOrd-1, knotsInput(0)),knotsInput, ArrayXd::Constant(kOrd-1, knotsInput(last));
+
+    ArrayXd deriv = splines;
+
+    // this loop transforms the splines array into the correct derivative
+    for (int n = nthDeriv; n > 0; n--)
+    {
+        // do the actual calculation
+
+        int k = kOrd-n+1;
+        int i = kOrd-1+index;
+
+        deriv(kOrd-n) = -(kOrd-n)*deriv(kOrd-n-1) /(knots(i-kOrd+n+k)-knots(i-kOrd+n+1));
+
+        for (int j = kOrd-n-1; j > 0; j--)
+        {
+            deriv(j) = (k-1)*deriv(j) / (knots(i-j+k-1)-knots(i-j))
+                     - (k-1)*deriv(j-1) / (knots(i-j+k)-knots(i-j+1));
+        }
+        deriv(0) = (kOrd-n)*deriv(0) / (knots(i+k-1)-knots(i));
+
+        cout << "derivative n= " << n << "\n" << deriv << endl;
+    }
+    cout << "result" << endl;
+    return deriv;
+}
+
 
 /**
  * @brief Function that returns spline values at position x but only those that are not zero
@@ -243,25 +287,24 @@ std::tuple<MatrixXd, int> bSplineAndDeriv(double x, ArrayXd &knotsInput, int kOr
 
 int main()
 {
+    int kOrd = 4;
     std::vector<double> knots = {0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1};
     ArrayXd splines(4); 
-    splines << 0.2,0.8,0,0;
+    splines << 1,0,0,0;
     ArrayXd knots2 = ArrayXd::LinSpaced(11,0,1);
 
-    double x = 0.52;
-    auto [mat, b] = bSplineAndDeriv(x, knots2, 4, 2);
-    cout << mat << endl;
-    cout << ndxBspline(splines, knots2, 8,2) << "\n" << endl;
+    double x = 1.0;
+    int orderDeriv = 1;
+    //auto [mat, b] = bSplineAndDeriv(x, knots2, 4, 2);
+    //cout << mat << endl;
 
-    auto [iter1, idx1] = bsplines(x, knots, 3);
-    cout << "index" << idx1 << endl;
-    for (auto x: iter1) cout << x << endl;
+    cout << "======Testing=====" << endl;
+    cout << ndxBspline(splines, knots2, 9, orderDeriv) << "\n" << endl;
     
-    auto [iter2, idx2] = ndx_bsplines(x, knots, 3,1);
-    cout << "index" << idx2 << endl;
-    for (auto x: iter2) cout << x << endl;
-
-    auto [iter, idx] = ndx_bsplines(x, knots, 3,2);
-    cout << "index" << idx << endl;
-    for (auto x: iter) cout << x << endl;   
+    for (int i = 0; i < orderDeriv+1; i++)
+    {
+        auto [iter, idx] = ndx_bsplines(x, knots, kOrd-orderDeriv+i-1,i);
+        cout << "======= order" << i << endl;
+        for (auto x: iter) cout << x << endl;  
+    }
 }
