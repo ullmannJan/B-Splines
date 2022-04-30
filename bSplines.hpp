@@ -83,8 +83,6 @@ ArrayXd ndxBsplinesHelper(ArrayXd &splines, ArrayXd &knotsInput, int index, uint
     // this loop transforms the splines array into the correct derivative
     for (int n = nDeriv; n > 0; n--)
     {
-        // do the actual calculation
-
         int k = kOrd-n+1;
         int i = kOrd-1+index;
 
@@ -174,8 +172,7 @@ std::tuple<MatrixXd, int> bSplinesWithDeriv(double x, ArrayXd &knotsInput, int k
         i--;
     }
 
-    //we iterate through to the k-2-th order in the triangular shape the problem
-    //then we stop to calculate the derivative, after that we continue for 2 more iterations.
+    //we iterate through to the k-2-th order in the triangular shape of the problem
     for (int k = 1; k < kOrd; k++)
     {
         
@@ -187,6 +184,7 @@ std::tuple<MatrixXd, int> bSplinesWithDeriv(double x, ArrayXd &knotsInput, int k
         }
         splines(0) = (x-knots(i))/(knots(i+k)-knots(i))*splines(0);
 
+        // if k is great enough we will start to calculate the derivatives on the fly
         if (k > kOrd-nDeriv-2)
         {
             output.col(kOrd-k-1) = ndxBsplinesHelper(splines, knots, i, kOrd-k-1);
@@ -270,8 +268,8 @@ std::tuple<ArrayXd, int> ndxBsplines(double x, ArrayXd &knotsInput, int kOrd, in
         i--;
     }
 
-    //we iterate through to the k-2-th order in the triangular shape the problem
-    //then we stop to calculate the derivative, after that we continue for 2 more iterations.
+    //we iterate through to the k-2-th order in the triangular shape of the problem
+    //when calculating the correct order splines we use them with the helper function to get the derivative
     for (int k = 1; k < kOrd-nDeriv; k++)
     {
         
