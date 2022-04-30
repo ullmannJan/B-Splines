@@ -1,5 +1,5 @@
 /**
- * @file bSplines.cpp
+ * @file bSplines.hpp
  * @author Ludwig Neste & Jan Ullmann
  * @brief Implemenation of an efficient algorithm to calculate the values of
  * BSplines and their derivatives in modern C++ using the Eigen package.
@@ -8,7 +8,7 @@
  * The used algorithms are similar to and inspired by DeBoors algorithm
  * (https://en.wikipedia.org/wiki/De_Boor%27s_algorithm), but distinct.
  *
- * Both template functions provide some code example, to give you an idea how to
+ * Both functions provide some code example, to give you an idea how to
  * use them.
  *
  *
