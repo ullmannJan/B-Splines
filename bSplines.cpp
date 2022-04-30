@@ -128,49 +128,6 @@ std::tuple<std::vector<T>, std::size_t> ndx_bsplines(
   return {iter, idx};
 }
 
-
-/**
- * @brief Returns nth derivative of B-splines from b-spline values
- * 
- * @param splines Array of length (order of splines) that contains all non zero B-splines for a point x
- * @param knots knot sequence of bsplines
- * @param index the index of the knot left of the point x
- * @param nthDeriv which derivative should be calculated, default = 1
- * @return ArrayXd
- */
-ArrayXd ndxBsplineOld(ArrayXd splines, ArrayXd knots, int index, unsigned int nthDeriv=1)
-{
-    int knotsSize = knots.size();
-    int kOrd = splines.size();
-    auto getKnot = [&knots, &knotsSize](int i)
-    {
-        if (i < 0)
-            return knots(0);
-        else if (i >= knotsSize)
-            return knots(knotsSize-1);
-        else
-            return knots(i);
-    };
-
-    ArrayXd deriv = splines;
-
-    for (int n = nthDeriv; n > 0; n--)
-    {
-        int k = kOrd-n+1;
-        int i = index+n;
-        deriv(kOrd-n) = -(kOrd-n)*deriv(kOrd-n-1) /(getKnot(i+k)-getKnot(i+1));
-        for (int j = n; j < kOrd-1; j++)
-        {
-            deriv(j) = (kOrd-n)*deriv(j) / (getKnot(i+j-n+1+k-1)-getKnot(i+j-n+1))
-                     - (kOrd-n)*deriv(j-1) / (getKnot(i+j-n-1+k)-getKnot(i+j-n));
-        }
-        deriv(0) = (kOrd-n)*deriv(0) / (getKnot(i+k-1)-getKnot(i));
-        //cout << deriv << endl;
-    }
-
-    return deriv;
-}
-
 /**
  * @brief Returns nth derivative of B-splines from b-spline values
  * 
@@ -208,9 +165,7 @@ ArrayXd ndxBspline(ArrayXd splines, ArrayXd knotsInput, int index, uint nthDeriv
         }
         deriv(0) = (kOrd-n)*deriv(0) / (knots(i+k-1)-knots(i));
 
-        cout << "derivative n= " << n << "\n" << deriv << endl;
     }
-    cout << "result" << endl;
     return deriv;
 }
 
@@ -275,8 +230,8 @@ std::tuple<MatrixXd, int> bSplineAndDeriv(double x, ArrayXd &knotsInput, int kOr
 
         if (k > kOrd-nDeriv-2)
         {
-            //cout << "spline\n" << splines << "\nk: " << k << endl;
-            //output.col(kOrd-k-1) = ndxBspline(splines, knots, i, kOrd-k);
+            cout << "spline\n" << splines << "\nk: " << k << endl;
+            output.col(kOrd-k-1) = ndxBspline(splines, knots, i, kOrd-k-1);
         }
     }
 
@@ -287,23 +242,29 @@ std::tuple<MatrixXd, int> bSplineAndDeriv(double x, ArrayXd &knotsInput, int kOr
 
 int main()
 {
-    int kOrd = 7;
+    int kOrd = 4;
     std::vector<double> knots = {0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1};
     ArrayXd splines(kOrd); 
-    splines << 1,0,0,0,0,0,0;
+    splines << 0.2,0.8,0,0;
     ArrayXd knots2 = ArrayXd::LinSpaced(11,0,1);
 
-    double x = 1;
-    int orderDeriv = 4;
-    //auto [mat, b] = bSplineAndDeriv(x, knots2, 4, 2);
-    //cout << mat << endl;
+    double x = 0.52;
+    int orderDeriv = 2;
+    auto [mat, b] = bSplineAndDeriv(x, knots2, kOrd, orderDeriv);
+    cout << mat << endl;
 
     cout << "======Testing=====" << endl;
-    cout << ndxBspline(splines, knots2, 9, orderDeriv) << "\n" << endl;
+    cout << ndxBspline(splines, knots2, 5, orderDeriv) << "\n" << endl;
+
+    cout << "Starting spline" << endl;
+    auto [iter1, idx1] = ndx_bsplines(x, knots, kOrd-orderDeriv-1,0);
+    for (auto x: iter1) cout << x << endl;
     
+
+    cout << "comparison" << endl;
     for (int i = 0; i < orderDeriv+1; i++)
     {
-        auto [iter, idx] = ndx_bsplines(x, knots, kOrd-orderDeriv+i-1,i);
+        auto [iter, idx] = ndx_bsplines(x, knots, kOrd-1,i);
         cout << "======= order" << i << endl;
         for (auto x: iter) cout << x << endl;  
     }
