@@ -230,7 +230,6 @@ std::tuple<MatrixXd, int> bSplineAndDeriv(double x, ArrayXd &knotsInput, int kOr
 
         if (k > kOrd-nDeriv-2)
         {
-            cout << "spline\n" << splines << "\nk: " << k << endl;
             output.col(kOrd-k-1) = ndxBspline(splines, knots, i, kOrd-k-1);
         }
     }
@@ -242,23 +241,14 @@ std::tuple<MatrixXd, int> bSplineAndDeriv(double x, ArrayXd &knotsInput, int kOr
 
 int main()
 {
-    int kOrd = 4;
+    int kOrd = 7;
     std::vector<double> knots = {0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1};
-    ArrayXd splines(kOrd); 
-    splines << 0.2,0.8,0,0;
     ArrayXd knots2 = ArrayXd::LinSpaced(11,0,1);
 
     double x = 0.52;
-    int orderDeriv = 2;
+    int orderDeriv = 0;
     auto [mat, b] = bSplineAndDeriv(x, knots2, kOrd, orderDeriv);
     cout << mat << endl;
-
-    cout << "======Testing=====" << endl;
-    cout << ndxBspline(splines, knots2, 5, orderDeriv) << "\n" << endl;
-
-    cout << "Starting spline" << endl;
-    auto [iter1, idx1] = ndx_bsplines(x, knots, kOrd-orderDeriv-1,0);
-    for (auto x: iter1) cout << x << endl;
     
 
     cout << "comparison" << endl;
