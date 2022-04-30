@@ -1,4 +1,20 @@
-//#pragma once
+/**
+ * @file bSplines.cpp
+ * @author Ludwig Neste & Jan Ullmann
+ * @brief Implemenation of an efficient algorithm to calculate the values of
+ * BSplines and their derivatives in modern C++ using the Eigen package.
+ * (C++ 17 required, compile with `-std=c++17`)
+ *
+ * The used algorithms are similar to and inspired by DeBoors algorithm
+ * (https://en.wikipedia.org/wiki/De_Boor%27s_algorithm), but distinct.
+ *
+ * Both template functions provide some code example, to give you an idea how to
+ * use them.
+ *
+ *
+ */
+
+#pragma once
 
 #include <iostream>
 #include <tuple>
@@ -9,13 +25,50 @@ using std::cout;
 using std::endl;
 
 /**
- * @brief Returns nth derivative of B-splines from b-spline values
+ * @brief calculates non-zero n-th derivative of B-Spline B_k,i(x) from the non-zero B-splines B_k-n,i(x) 
+ *        The splines are ordered in descending order e.g. [B_i, B_i-1, B_i-2, ... , B_i-kOrd+1]
+ *        This function is more of a helper methods for the bigger bSplinesWithDeriv() than a really useful
+ *        function. I would adwise to just calculate everything with bSplinesWithDeriv()
  * 
- * @param splines Array of length (order of splines) that contains all non zero B-splines for a point x
- * @param knots knot sequence of bsplines
- * @param index the index of the knot left of the point x
- * @param nthDeriv which derivative should be calculated, default = 1
- * @return ArrayXd
+ * @code
+#include <Eigen/Dense>
+#include <iostream>
+#include <tuple>
+using namespace Eigen;
+
+...
+
+int kOrd = 4;
+ArrayXd knots = ArrayXd::LinSpaced(11,0,1);
+
+double x = 0.52;
+int index = 5; //knots left to x;
+int orderDeriv = 2;
+
+ArrayXd splines(kOrd);
+splines << 0.2,0.8,0,0; // B-splines B_(kOrd-orderDeriv, index)(x)
+//could also be calculated with the bSplinesWithDeriv() method beneath
+
+std::cout << ndxBsplines(splines, knots, index, orderDeriv) << std::endl;
+
+//Expected output
+//  20
+//  40
+//-140
+//  80
+
+ * @endcode
+ * 
+ *         
+ * @param splines An array of length k (order of B-splines to calulate derivative of)
+ *                that contains the correct non-zero B-splines of order k-n where n is 
+ *                the degree of the derivative.
+ * @param knots knot sequence of bsplines without ghost points
+ * @param index the index of the knot left of the point x or the index of the knot itself
+ *              (exception for the last knot, there the index i_last-1 should be given into the function)
+ * @param nthDeriv order of derivative that is calculated, default = 1
+ * @return ArrayXd of length k that contains the derivative values of the non-zero derivatives
+ *         of splines B_k,i(x)
  */
 ArrayXd ndxBsplines(ArrayXd splines, ArrayXd knotsInput, int index, uint nthDeriv=1)
 {
@@ -52,14 +105,40 @@ ArrayXd ndxBsplines(ArrayXd splines, ArrayXd knotsInput, int index, uint nthDeri
 
 /**
  * @brief Function that returns spline values at position x but only those that are not zero
- *        together with its 1st and 2nd derivatives and an index of which spline.
+ *        together with all derivatives until the nth derivative.
+ *        It also returns an index of the highest spline that is non-zero.
  *        Ghost points on both sides of the knots are automatically generated.
+ *        The splines are ordered in descending order e.g. [B_i, B_i-1, B_i-2, ... , B_i-kOrd+1]
  * 
- * @param x The x where to retrieve the spline value;
- * @param knotsInput the knot points that have no ghost points yet
+ * @code
+#include <Eigen/Dense>
+#include <iostream>
+#include <tuple>
+using namespace Eigen;
+
+...
+
+int kOrd = 4;
+ArrayXd knots = ArrayXd::LinSpaced(11,0,1);
+
+double x = 0.52;
+int orderDeriv = 2;
+auto [mat, b] = bSplinesWithDeriv(x, knots, kOrd, orderDeriv);
+std::cout << mat << std::endl;
+
+//Expected Output
+//0.00133333        0.2         20
+//  0.282667        6.4         40
+//  0.630667       -3.4       -140
+// 0.0853333       -3.2         80
+ * @endcode
+ * 
+ * @param x The x where to retrieve the spline values;
+ * @param knotsInput the knot points without ghost points
  * @param kOrd order of the splines that are calculated
- * @return MatrixXd that contains the values of the splines and derivs and the index i in the ghosted array
- *         remember that the splines are ordered as i, i-1, i-2, ... i-kOrd+1 in the arrays
+ * @return std::tuple<MatrixXd, int> that contains the splines in column 0 and then 
+ *         the n-th derivative in the nth column.
+ *         The other parameter is the highest index of the non-zero splines.
  */
 std::tuple<MatrixXd, int> bSplinesWithDeriv(double x, ArrayXd &knotsInput, int kOrd, int nDeriv)
 {
@@ -93,7 +172,6 @@ std::tuple<MatrixXd, int> bSplinesWithDeriv(double x, ArrayXd &knotsInput, int k
         }
         i--;
     }
-    //cout << "i-start: " << i << " knots(i): " << knots(i) << endl;
 
     //we iterate through to the k-2-th order in the triangular shape the problem
     //then we stop to calculate the derivative, after that we continue for 2 more iterations.
@@ -117,15 +195,4 @@ std::tuple<MatrixXd, int> bSplinesWithDeriv(double x, ArrayXd &knotsInput, int k
     output.col(0) = splines;
     return {output, i};
 
-}
-
-int main()
-{
-    int kOrd = 4;
-    ArrayXd knots = ArrayXd::LinSpaced(11,0,1);
-
-    double x = 0.52;
-    int orderDeriv = 2;
-    auto [mat, b] = bSplinesWithDeriv(x, knots, kOrd, orderDeriv);
-    cout << mat << endl;
 }
